@@ -40,6 +40,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          yes | sdkmanager --sdk_root="${ANDROID_SDK_ROOT}" --licenses >/dev/null || true
           sdkmanager --sdk_root="${ANDROID_SDK_ROOT}" "platforms;android-36" "cmake;3.22.1" "ndk;27.2.12479018"
 
       - name: Install web dependencies
@@ -61,16 +62,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m pip install --disable-pip-version-check -q -U huggingface_hub
           rm -rf .build/nllb-model
-          mkdir -p .build/nllb-model
-          hf download Hosstia/nllb-200-distilled-600m-gguf \
-            --include '*Q4_0*.gguf' \
-            --local-dir .build/nllb-model
-          MODEL_FILE="$(find .build/nllb-model -type f -name '*Q4_0*.gguf' -print -quit)"
-          test -n "$MODEL_FILE"
+          mkdir -p .build/nllb-model app/src/main/assets/models
+          MODEL_URL="https://huggingface.co/Hosstia/nllb-200-distilled-600m-gguf/resolve/main/nllb-600m-Q4_0.gguf?download=true"
+          MODEL_FILE=".build/nllb-model/nllb-600m-Q4_0.gguf"
+          echo "Downloading $MODEL_URL"
+          curl -L --fail --retry 5 --retry-all-errors --connect-timeout 20 -o "$MODEL_FILE" "$MODEL_URL"
           test "$(stat -c %s "$MODEL_FILE")" -gt 450000000
-          mkdir -p app/src/main/assets/models
           cp "$MODEL_FILE" app/src/main/assets/models/nllb-q4.gguf
           stat -c 'Embedded NLLB model: %s bytes' app/src/main/assets/models/nllb-q4.gguf
 
@@ -84,6 +82,7 @@ jobs:
             -DLLAMA_BUILD_TESTS=OFF \
             -DLLAMA_BUILD_TOOLS=OFF \
             -DLLAMA_BUILD_SERVER=OFF \
+            -DLLAMA_BUILD_COMMON=ON \
             -DGGML_NATIVE=OFF \
             -DGGML_OPENMP=OFF \
             -DGGML_LLAMAFILE=OFF
