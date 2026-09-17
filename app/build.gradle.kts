@@ -20,10 +20,9 @@ android {
         }
     }
 
-    // Allow APK compression of the large ONNX model files.
-    // WASM stays uncompressed for fast local loading.
     androidResources {
         noCompress += "wasm"
+        noCompress += "xz"
     }
 
     packaging {
@@ -31,4 +30,13 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
+}
+
+dependencies {
+    implementation("org.tukaani:xz:1.12")
 }
