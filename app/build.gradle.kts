@@ -20,8 +20,9 @@ android {
         }
     }
 
+    // Allow APK compression of the large ONNX model files.
+    // WASM stays uncompressed for fast local loading.
     androidResources {
-        noCompress += "onnx"
         noCompress += "wasm"
     }
 
