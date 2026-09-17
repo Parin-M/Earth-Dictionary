@@ -33,12 +33,14 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
 
       - name: Install Android native toolchain
         shell: bash
         run: |
           set -euo pipefail
-          sdkmanager "platform-tools" "platforms;android-36" "cmake;3.22.1" "ndk;27.2.12479018"
+          sdkmanager --sdk_root="${ANDROID_SDK_ROOT}" "platforms;android-36" "cmake;3.22.1" "ndk;27.2.12479018"
 
       - name: Install web dependencies
         working-directory: web
