@@ -26,7 +26,7 @@ import java.util.concurrent.Executors;
 public final class MainActivity extends Activity {
     private static final String LOCAL_ORIGIN = "earth.local";
     private static final String START_URL = "https://" + LOCAL_ORIGIN + "/index.html";
-    private static final String MODEL_ASSET = "models/nllb-q4.gguf";
+    private static final String MODEL_ASSET = "models/m2m100-q4k.gguf";
 
     private WebView webView;
     private NativeBridge nativeBridge;
@@ -82,7 +82,7 @@ public final class MainActivity extends Activity {
                 try {
                     File model = prepareModel();
                     ready = NativeTranslator.nativeInit(model.getAbsolutePath());
-                    notifyModelReady(ready, ready ? "" : "Native NLLB initialization failed.");
+                    notifyModelReady(ready, ready ? "" : "Native M2M100 initialization failed.");
                 } catch (Exception e) {
                     ready = false;
                     notifyModelReady(false, e.getMessage() == null ? "Model initialization failed." : e.getMessage());
@@ -105,7 +105,7 @@ public final class MainActivity extends Activity {
                 try {
                     String result = NativeTranslator.nativeTranslate(text, srcLang, dstLang);
                     if (result == null || result.isEmpty()) {
-                        notifyTranslation(requestId, "", false, "Native NLLB returned no text.");
+                        notifyTranslation(requestId, "", false, "Native M2M100 returned no text.");
                     } else {
                         notifyTranslation(requestId, result, true, "");
                     }
@@ -121,10 +121,10 @@ public final class MainActivity extends Activity {
         }
 
         private File prepareModel() throws IOException {
-            File model = new File(activity.getFilesDir(), "nllb-q4.gguf");
-            if (model.isFile() && model.length() > 450_000_000L) return model;
+            File model = new File(activity.getFilesDir(), "m2m100-q4k.gguf");
+            if (model.isFile() && model.length() > 250_000_000L) return model;
 
-            File tmp = new File(activity.getFilesDir(), "nllb-q4.gguf.part");
+            File tmp = new File(activity.getFilesDir(), "m2m100-q4k.gguf.part");
             if (tmp.exists() && !tmp.delete()) {
                 throw new IOException("Cannot replace incomplete model cache.");
             }
