@@ -58,10 +58,20 @@ if(NOT MSVC)
     target_compile_options(m2m100 PRIVATE -O3)
 endif()
 
-add_library(earthm2m SHARED native-lib.cpp)
-target_compile_features(earthm2m PRIVATE cxx_std_17)
-target_include_directories(earthm2m PRIVATE
-    "${CRISPASR_SRC_DIR}/src"
-    "${CRISPASR_SRC_DIR}/src/core"
-)
-target_link_libraries(earthm2m PRIVATE m2m100 Threads::Threads log android)
+option(EARTH_M2M_HOST_TEST "Build the desktop M2M100 smoke-test executable" OFF)
+if(EARTH_M2M_HOST_TEST)
+    add_executable(earthm2m-smoke m2m100-smoke.cpp)
+    target_compile_features(earthm2m-smoke PRIVATE cxx_std_17)
+    target_include_directories(earthm2m-smoke PRIVATE "${CRISPASR_SRC_DIR}/src")
+    target_link_libraries(earthm2m-smoke PRIVATE m2m100 Threads::Threads)
+endif()
+
+if(ANDROID)
+    add_library(earthm2m SHARED native-lib.cpp)
+    target_compile_features(earthm2m PRIVATE cxx_std_17)
+    target_include_directories(earthm2m PRIVATE
+        "${CRISPASR_SRC_DIR}/src"
+        "${CRISPASR_SRC_DIR}/src/core"
+    )
+    target_link_libraries(earthm2m PRIVATE m2m100 Threads::Threads log android)
+endif()
