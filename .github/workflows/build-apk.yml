@@ -57,14 +57,30 @@ jobs:
           download "$MODEL_BASE/onnx/decoder_model_merged_quantized.onnx" "$MODEL_DIR/onnx/decoder_model_merged_quantized.onnx"
           curl -L --fail --retry 3 -o "$MODEL_DIR/LICENSE" "$MODEL_BASE/LICENSE" || true
 
-      - name: Copy only the required ONNX Runtime WebAssembly binary
+      - name: Compress embedded model assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          MODEL_DIR="web/public/models/Xenova/nllb-200-distilled-600M"
+          echo "Before compression:"
+          du -h "$MODEL_DIR" "$MODEL_DIR/onnx" || true
+          find "$MODEL_DIR" -type f \( -name '*.onnx' -o -name '*.json' \) -print0 |
+            while IFS= read -r -d '' file; do
+              echo "Compressing $file"
+              xz -9e -T0 -f "$file"
+            done
+          echo "After compression:"
+          du -h "$MODEL_DIR" "$MODEL_DIR/onnx" || true
+          echo "Compressed model assets:"
+          find "$MODEL_DIR" -type f -name '*.xz' -printf '%p %s bytes\n' | sort
+
+      - name: Copy ONNX Runtime WebAssembly binaries
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p web/public/wasm
-          ORT_WASM="web/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm"
-          test -f "$ORT_WASM"
-          cp -f "$ORT_WASM" web/public/wasm/
+          find web/node_modules/onnxruntime-web -type f -name 'ort-wasm-simd-threaded.wasm' -exec cp -f {} web/public/wasm/ \;
+          test -s web/public/wasm/ort-wasm-simd-threaded.wasm
 
       - name: Build web UI
         working-directory: web
@@ -78,13 +94,6 @@ jobs:
           mkdir -p app/src/main/assets/web
           cp -R web/dist/. app/src/main/assets/web/
 
-      - name: Show packaged model size
-        shell: bash
-        run: |
-          set -euo pipefail
-          du -h web/public/models/Xenova/nllb-200-distilled-600M/onnx/*.onnx
-          du -h web/public/wasm/*.wasm
-
       - name: Build installable APK
         run: gradle --no-daemon :app:assembleDebug --stacktrace
 
@@ -92,7 +101,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ls -lh app/build/outputs/apk/debug/app-debug.apk
+          stat -c 'APK size: %s bytes' app/build/outputs/apk/debug/app-debug.apk
+          du -h app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
