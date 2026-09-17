@@ -14,7 +14,7 @@ const nativeReadyPromise=new Promise((resolve,reject)=>{nativeReadyResolve=resol
 window.earthNativeModelReady=(ok,message='')=>{state.nativeReady=!!ok;if(ok){els.status.textContent='M2M-100 · '+(strings()?.device||'On device');nativeReadyResolve();}else{nativeReadyReject(new Error(message||'Native M2M100 initialization failed.'));els.status.textContent=message||'Translation engine unavailable.';}};
 window.earthNativeTranslationResult=(id,result,ok,message='')=>{const p=pending.get(id);if(!p)return;pending.delete(id);ok?p.resolve(result):p.reject(new Error(message||'Translation failed.'));};
 
-const rtl=c=>['ar','ckb','fa','he','ps','sd','ur'].includes(c), name=c=>LANGUAGES.find(x=>x.code===c)?.name||c;
+const rtl=c=>['ar','fa','he','ps','sd','ur'].includes(c), name=c=>LANGUAGES.find(x=>x.code===c)?.name||c;
 function strings(){return state.appLang==='fa'?FA:state.appLang==='en'?EN:null}
 async function nativeTranslate(text,src,dst){if(!window.EarthNative)throw new Error('Native engine bridge is unavailable.');if(!state.nativeReady)await nativeReadyPromise;return new Promise((resolve,reject)=>{const id='r'+(++requestCounter);pending.set(id,{resolve,reject});try{window.EarthNative.translate(id,text,src,dst)}catch(e){pending.delete(id);reject(e)}})}
 function opts(select,list){select.replaceChildren(...list.map(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;return o;}))}
