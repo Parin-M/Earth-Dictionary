@@ -1,0 +1,89 @@
+name: Build Earth Dictionary APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Set up Gradle 9.6
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
+
+      - name: Install web dependencies
+        working-directory: web
+        run: npm install --no-audit --no-fund
+
+      - name: Download offline translation model
+        shell: bash
+        run: |
+          set -euo pipefail
+          MODEL_DIR="web/public/models/Xenova/nllb-200-distilled-600M"
+          MODEL_BASE="https://huggingface.co/Xenova/nllb-200-distilled-600M/resolve/main"
+          mkdir -p "$MODEL_DIR/onnx"
+          download() {
+            local url="$1"
+            local out="$2"
+            echo "Downloading $url"
+            curl -L --fail --retry 5 --retry-all-errors --connect-timeout 20 -o "$out" "$url"
+          }
+          download "$MODEL_BASE/config.json" "$MODEL_DIR/config.json"
+          download "$MODEL_BASE/generation_config.json" "$MODEL_DIR/generation_config.json"
+          download "$MODEL_BASE/tokenizer.json" "$MODEL_DIR/tokenizer.json"
+          download "$MODEL_BASE/tokenizer_config.json" "$MODEL_DIR/tokenizer_config.json"
+          download "$MODEL_BASE/special_tokens_map.json" "$MODEL_DIR/special_tokens_map.json"
+          download "$MODEL_BASE/onnx/encoder_model_quantized.onnx" "$MODEL_DIR/onnx/encoder_model_quantized.onnx"
+          download "$MODEL_BASE/onnx/decoder_model_merged_quantized.onnx" "$MODEL_DIR/onnx/decoder_model_merged_quantized.onnx"
+          curl -L --fail --retry 3 -o "$MODEL_DIR/LICENSE" "$MODEL_BASE/LICENSE" || true
+
+      - name: Copy ONNX Runtime WebAssembly binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p web/public/wasm
+          find web/node_modules/onnxruntime-web -type f -name '*.wasm' -exec cp -f {} web/public/wasm/ \;
+          test -n "$(find web/public/wasm -type f -name '*.wasm' -print -quit)"
+
+      - name: Build web UI
+        working-directory: web
+        run: npm run build
+
+      - name: Package web UI into Android assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf app/src/main/assets/web
+          mkdir -p app/src/main/assets/web
+          cp -R web/dist/. app/src/main/assets/web/
+
+      - name: Build installable APK
+        run: gradle --no-daemon :app:assembleDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Earth-Dictionary-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14

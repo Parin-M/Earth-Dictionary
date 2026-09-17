@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#f7f8fa" />
+  <title>Earth Dictionary</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main class="shell">
+    <header class="header">
+      <div>
+        <h1>Earth Dictionary</h1>
+        <p>Dictionary &amp; Offline Translator</p>
+      </div>
+      <span class="offline-pill">● کاملاً آفلاین</span>
+    </header>
+
+    <section class="card">
+      <div class="lang-row">
+        <label>
+          <span>زبان مبدأ</span>
+          <select id="sourceLanguage"></select>
+        </label>
+        <button id="swap" class="swap" aria-label="جابه‌جایی زبان‌ها">⇄</button>
+        <label>
+          <span>زبان مقصد</span>
+          <select id="targetLanguage"></select>
+        </label>
+      </div>
+
+      <div class="search-row">
+        <input id="languageFilter" type="search" placeholder="جستجوی زبان…" autocomplete="off" />
+      </div>
+
+      <div class="editor-grid">
+        <section class="panel">
+          <div class="panel-title"><span>متن ورودی</span><button id="clear" class="text-btn">پاک کردن</button></div>
+          <textarea id="sourceText" maxlength="12000" placeholder="متن را وارد کنید…"></textarea>
+          <div class="counter"><span id="sourceCount">۰</span> / ۱۲۰۰۰</div>
+        </section>
+        <section class="panel result-panel">
+          <div class="panel-title"><span>ترجمه</span><button id="copy" class="text-btn">کپی</button></div>
+          <div id="resultText" class="result" aria-live="polite">ترجمه اینجا نمایش داده می‌شود.</div>
+          <div id="progressWrap" class="progress-wrap" hidden><div id="progressBar" class="progress-bar"></div></div>
+        </section>
+      </div>
+
+      <button id="translate" class="primary">ترجمه</button>
+      <p id="status" class="status">مدل ترجمه هنوز بارگذاری نشده است.</p>
+    </section>
+
+    <section class="info-grid">
+      <div class="mini-card"><strong>NLLB-200</strong><span>پوشش زبانی گسترده روی خود دستگاه</span></div>
+      <div class="mini-card"><strong>ONNX / WASM</strong><span>بدون API و بدون ارسال متن به اینترنت</span></div>
+      <div class="mini-card"><strong>Local History</strong><span>تاریخچه فقط داخل گوشی ذخیره می‌شود</span></div>
+    </section>
+  </main>
+  <script type="module" src="/main.js"></script>
+</body>
+</html>
