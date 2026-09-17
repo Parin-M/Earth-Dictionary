@@ -1,222 +1,31 @@
 import { pipeline, env } from '@huggingface/transformers';
 import { LANGUAGES } from './languages.js';
 
-const MODEL_ID = 'Xenova/nllb-200-distilled-600M';
-const MAX_CHUNK_CHARS = 1200;
+const MODEL_ID='Xenova/nllb-200-distilled-600M', MAX_CHUNK=1200;
+const EN={tagline:'Dictionary & translator',eyebrow:'Translation',hero:'Simple, private, on-device.',device:'On device',source:'Source language',target:'Target language',search:'Search languages…',input:'Input text',clear:'Clear',translation:'Translation',save:'Save',copy:'Copy',share:'Share',placeholder:'Your translation will appear here.',inputPH:'Type or paste text…',translate:'Translate',export:'Export',favorites:'Favorites',favoritesHint:'Saved translations',history:'History',historyHint:'Recent translations',about:'About',aboutHint:'Earth Dictionary',settings:'Settings',preferences:'Preferences',appLanguage:'App language',appLanguageHint:'Use any supported language for the interface.',theme:'Theme',themeHint:'Choose the look of the app.',system:'System',light:'Light',dark:'Dark',textSize:'Text size',textSizeHint:'Adjust readability.',animations:'Animations',animationsHint:'Use soft motion throughout the interface.',remember:'Remember languages',rememberHint:'Keep your last language pair.',clearHistory:'Clear local history',recent:'Recent translations',saved:'Saved translations',aboutText:'A minimal dictionary and on-device translator built for private, everyday language work.',createdBy:'Created by',model:'Translation model',version:'Version',use:'Use',remove:'Remove',noHistory:'No translations yet.',noFavorites:'No saved translations yet.'};
+const FA={...EN,tagline:'واژه‌نامه و مترجم',eyebrow:'ترجمه',hero:'ساده، خصوصی و روی خود دستگاه.',device:'روی دستگاه',source:'زبان مبدأ',target:'زبان مقصد',search:'جستجوی زبان…',input:'متن ورودی',clear:'پاک کردن',translation:'ترجمه',save:'ذخیره',copy:'کپی',share:'اشتراک‌گذاری',placeholder:'ترجمه اینجا نمایش داده می‌شود.',inputPH:'متن را وارد یا جای‌گذاری کنید…',translate:'ترجمه',export:'خروجی',favorites:'ذخیره‌شده‌ها',favoritesHint:'ترجمه‌های ذخیره‌شده',history:'تاریخچه',historyHint:'ترجمه‌های اخیر',about:'درباره',aboutHint:'Earth Dictionary',settings:'تنظیمات',preferences:'ترجیحات',appLanguage:'زبان برنامه',appLanguageHint:'زبان رابط را انتخاب کنید.',theme:'پوسته',themeHint:'ظاهر برنامه را انتخاب کنید.',system:'سیستم',light:'روشن',dark:'تیره',textSize:'اندازه متن',textSizeHint:'خوانایی متن را تنظیم کنید.',animations:'انیمیشن‌ها',animationsHint:'حرکت‌های نرم رابط.',remember:'به‌خاطر سپاری زبان‌ها',rememberHint:'آخرین جفت زبان حفظ شود.',clearHistory:'پاک کردن تاریخچه محلی',recent:'ترجمه‌های اخیر',saved:'ترجمه‌های ذخیره‌شده',aboutText:'یک واژه‌نامه و مترجم مینیمال و روی دستگاه، برای استفاده روزمره و خصوصی.',createdBy:'ساخته‌شده توسط',model:'مدل ترجمه',version:'نسخه',use:'استفاده',remove:'حذف',noHistory:'هنوز ترجمه‌ای ثبت نشده است.',noFavorites:'هنوز ترجمه‌ای ذخیره نشده است.'};
 
-env.allowRemoteModels = false;
-env.allowLocalModels = true;
-env.useBrowserCache = false;
-env.localModelPath = '/models/';
-env.backends.onnx.wasm.wasmPaths = '/wasm/';
-env.backends.onnx.wasm.numThreads = 1;
-
-globalThis.process = globalThis.process || { env: {} };
-
-const sourceSelect = document.querySelector('#sourceLanguage');
-const targetSelect = document.querySelector('#targetLanguage');
-const sourceText = document.querySelector('#sourceText');
-const resultText = document.querySelector('#resultText');
-const translateButton = document.querySelector('#translate');
-const status = document.querySelector('#status');
-const copyButton = document.querySelector('#copy');
-const clearButton = document.querySelector('#clear');
-const swapButton = document.querySelector('#swap');
-const sourceCount = document.querySelector('#sourceCount');
-const languageFilter = document.querySelector('#languageFilter');
-const progressWrap = document.querySelector('#progressWrap');
-const progressBar = document.querySelector('#progressBar');
-
-let allLanguages = [...LANGUAGES].sort((a, b) => a.name.localeCompare(b.name));
-let translatorPromise = null;
-let activeFilter = '';
-let detectedSource = 'eng_Latn';
-
-function addOption(select, code, name) {
-  const option = document.createElement('option');
-  option.value = code;
-  option.textContent = name;
-  select.appendChild(option);
-}
-
-function populateLanguages() {
-  const previousSource = sourceSelect.value;
-  const previousTarget = targetSelect.value;
-  sourceSelect.replaceChildren();
-  targetSelect.replaceChildren();
-  addOption(sourceSelect, 'auto', 'تشخیص خودکار');
-  const items = activeFilter
-    ? allLanguages.filter(x => `${x.name} ${x.code}`.toLowerCase().includes(activeFilter.toLowerCase()))
-    : allLanguages;
-  for (const lang of items) {
-    addOption(sourceSelect, lang.code, `${lang.name} — ${lang.code}`);
-    addOption(targetSelect, lang.code, `${lang.name} — ${lang.code}`);
-  }
-  sourceSelect.value = items.some(x => x.code === previousSource) ? previousSource : 'auto';
-  targetSelect.value = items.some(x => x.code === previousTarget) ? previousTarget : 'eng_Latn';
-}
-
-function setStatus(message, busy = false) {
-  status.textContent = message;
-  translateButton.disabled = busy;
-  if (!busy) {
-    progressWrap.hidden = true;
-    progressBar.style.width = '0%';
-  }
-}
-
-function detectLanguage(text) {
-  if (!text.trim()) return 'eng_Latn';
-  if (/[پچژگک]/.test(text)) return 'pes_Arab';
-  if (/[߀-ࣿ]/.test(text)) return 'arb_Arab';
-  if (/[぀-ヿ]/.test(text)) return 'jpn_Jpan';
-  if (/[가-힯]/.test(text)) return 'kor_Hang';
-  if (/[一-鿿]/.test(text)) return 'zho_Hans';
-  if (/[ऀ-ॿ]/.test(text)) return 'hin_Deva';
-  if (/[ঀ-৿]/.test(text)) return 'ben_Beng';
-  if (/[஀-௿]/.test(text)) return 'tam_Taml';
-  if (/[ఀ-౿]/.test(text)) return 'tel_Telu';
-  if (/[ഀ-ൿ]/.test(text)) return 'mal_Mlym';
-  if (/[Ѐ-ӿ]/.test(text)) return 'rus_Cyrl';
-  if (/[Ͱ-Ͽ]/.test(text)) return 'ell_Grek';
-  if (/[԰-֏]/.test(text)) return 'hye_Armn';
-  if (/[Ⴀ-ჿ]/.test(text)) return 'kat_Geor';
-  if (/[֐-׿]/.test(text)) return 'heb_Hebr';
-  return 'eng_Latn';
-}
-
-function splitText(text) {
-  const normalized = text.replace(/\r\n/g, '\n').trim();
-  if (normalized.length <= MAX_CHUNK_CHARS) return [normalized];
-  const pieces = [];
-  let rest = normalized;
-  while (rest.length > MAX_CHUNK_CHARS) {
-    let cut = rest.lastIndexOf('\n', MAX_CHUNK_CHARS);
-    if (cut < MAX_CHUNK_CHARS * 0.55) cut = rest.lastIndexOf('۔', MAX_CHUNK_CHARS);
-    if (cut < MAX_CHUNK_CHARS * 0.55) cut = rest.lastIndexOf('.', MAX_CHUNK_CHARS);
-    if (cut < MAX_CHUNK_CHARS * 0.55) cut = rest.lastIndexOf(' ', MAX_CHUNK_CHARS);
-    if (cut < 1) cut = MAX_CHUNK_CHARS;
-    pieces.push(rest.slice(0, cut).trim());
-    rest = rest.slice(cut).trim();
-  }
-  if (rest) pieces.push(rest);
-  return pieces;
-}
-
-async function getTranslator() {
-  if (!translatorPromise) {
-    setStatus('در حال بارگذاری مدل ترجمه روی دستگاه…', true);
-    translatorPromise = pipeline('translation', MODEL_ID, {
-      dtype: 'q8',
-      device: 'wasm',
-      progress_callback: progress => {
-        if (typeof progress?.progress === 'number') {
-          progressWrap.hidden = false;
-          progressBar.style.width = `${Math.max(0, Math.min(100, progress.progress))}%`;
-        }
-        if (progress?.status === 'progress') setStatus(`در حال آماده‌سازی مدل… ${Math.round(progress.progress || 0)}%`, true);
-        else if (progress?.status === 'ready') setStatus('مدل آماده است.', false);
-      }
-    });
-  }
-  return translatorPromise;
-}
-
-async function translate() {
-  const text = sourceText.value.trim();
-  if (!text) {
-    setStatus('ابتدا متن ورودی را وارد کنید.');
-    return;
-  }
-  const source = sourceSelect.value === 'auto' ? detectLanguage(text) : sourceSelect.value;
-  const target = targetSelect.value;
-  detectedSource = source;
-  if (source === target) {
-    resultText.textContent = text;
-    setStatus('زبان مبدأ و مقصد یکسان است.');
-    return;
-  }
-
-  resultText.textContent = 'در حال ترجمه…';
-  setStatus(`ترجمهٔ آفلاین ${LANGUAGES.find(x => x.code === source)?.name || source} → ${LANGUAGES.find(x => x.code === target)?.name || target}`, true);
-  progressWrap.hidden = false;
-  progressBar.style.width = '0%';
-
-  try {
-    const translator = await getTranslator();
-    const chunks = splitText(text);
-    const outputs = [];
-    for (let i = 0; i < chunks.length; i += 1) {
-      const out = await translator(chunks[i], {
-        src_lang: source,
-        tgt_lang: target,
-        max_new_tokens: 256
-      });
-      outputs.push(Array.isArray(out) ? out[0]?.translation_text ?? '' : String(out));
-      progressBar.style.width = `${Math.round(((i + 1) / chunks.length) * 100)}%`;
-    }
-    const finalText = outputs.join('\n\n');
-    resultText.textContent = finalText || 'ترجمه‌ای تولید نشد.';
-    localStorage.setItem('earth_dictionary_last_translation', JSON.stringify({ source, target, input: text, output: finalText, at: Date.now() }));
-    setStatus('ترجمه با موفقیت و کاملاً روی دستگاه انجام شد.');
-  } catch (error) {
-    console.error(error);
-    translatorPromise = null;
-    resultText.textContent = 'خطا در اجرای مدل ترجمه.';
-    setStatus(`خطا: ${error?.message || 'مدل یا فایل‌های آن پیدا نشد.'}`);
-  } finally {
-    translateButton.disabled = false;
-    progressWrap.hidden = true;
-  }
-}
-
-translateButton.addEventListener('click', translate);
-sourceText.addEventListener('input', () => {
-  sourceCount.textContent = sourceText.value.length.toLocaleString('fa-IR');
-});
-clearButton.addEventListener('click', () => {
-  sourceText.value = '';
-  resultText.textContent = 'ترجمه اینجا نمایش داده می‌شود.';
-  sourceCount.textContent = '۰';
-  setStatus('متن پاک شد.');
-});
-copyButton.addEventListener('click', async () => {
-  const text = resultText.textContent.trim();
-  if (!text || text === 'ترجمه اینجا نمایش داده می‌شود.') return;
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch {
-    const temp = document.createElement('textarea');
-    temp.value = text;
-    document.body.appendChild(temp);
-    temp.select();
-    document.execCommand('copy');
-    temp.remove();
-  }
-  setStatus('ترجمه در کلیپ‌بورد کپی شد.');
-});
-swapButton.addEventListener('click', () => {
-  const currentSource = sourceSelect.value;
-  const currentTarget = targetSelect.value;
-  if (currentSource !== 'auto') {
-    sourceSelect.value = currentTarget;
-    targetSelect.value = currentSource;
-  } else {
-    sourceSelect.value = detectedSource;
-    targetSelect.value = currentTarget;
-  }
-  const oldInput = sourceText.value;
-  sourceText.value = resultText.textContent === 'ترجمه اینجا نمایش داده می‌شود.' ? oldInput : resultText.textContent;
-  resultText.textContent = oldInput || 'ترجمه اینجا نمایش داده می‌شود.';
-  sourceCount.textContent = sourceText.value.length.toLocaleString('fa-IR');
-  setStatus('زبان‌ها جابه‌جا شدند.');
-});
-languageFilter.addEventListener('input', event => {
-  activeFilter = event.target.value.trim();
-  populateLanguages();
-});
-
-populateLanguages();
-sourceSelect.value = 'auto';
-targetSelect.value = 'eng_Latn';
-setStatus('آماده. هیچ متنی به اینترنت ارسال نمی‌شود.');
+env.allowRemoteModels=false; env.allowLocalModels=true; env.useBrowserCache=false; env.localModelPath='/models/';
+env.backends.onnx.wasm.wasmPaths='/wasm/'; env.backends.onnx.wasm.numThreads=Math.max(1,Math.min(2,navigator.hardwareConcurrency||1));
+const $=s=>document.querySelector(s), els={src:$('#sourceLanguage'),dst:$('#targetLanguage'),app:$('#appLanguage'),filter:$('#languageFilter'),input:$('#sourceText'),out:$('#resultText'),go:$('#translate'),status:$('#status'),count:$('#sourceCount'),bar:$('#progressBar'),wrap:$('#progressWrap'),toast:$('#toast'),splash:$('#splash'),overlay:$('#overlay'),history:$('#historyList'),favs:$('#favoritesList')};
+const state={model:null,detected:'eng_Latn',appLang:localStorage.getItem('earth_app_language')||'pes_Arab'};
+const rtl=c=>c?.endsWith('_Arab')||c?.endsWith('_Hebr'), name=c=>LANGUAGES.find(x=>x.code===c)?.name||c;
+function strings(){return state.appLang==='pes_Arab'?FA:state.appLang==='eng_Latn'?EN:null}
+async function translator(){if(!state.model){els.status.textContent=FA.model+'…';state.model=await pipeline('translation',MODEL_ID,{dtype:'q8',device:'wasm',progress_callback:p=>{if(typeof p?.progress==='number'){els.wrap.hidden=false;els.bar.style.width=p.progress+'%';}}});}return state.model}
+function opts(select,list){select.replaceChildren(...list.map(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;return o;}))}
+function populate(){const q=els.filter.value.trim().toLowerCase(), list=q?LANGUAGES.filter(x=>(x.name+x.code).toLowerCase().includes(q)):LANGUAGES;opts(els.src,[['auto',state.appLang==='pes_Arab'?'تشخیص خودکار':'Auto detect'],...list.map(x=>[x.code,`${x.name} — ${x.code}`])]);opts(els.dst,list.map(x=>[x.code,`${x.name} — ${x.code}`]));opts(els.app,LANGUAGES.map(x=>[x.code,`${x.name} — ${x.code}`]));els.app.value=state.appLang;if(!els.dst.value)els.dst.value='eng_Latn'}
+function detect(t){if(/[پچژگک]/.test(t))return'pes_Arab';if(/[぀-ヿ]/.test(t))return'jpn_Jpan';if(/[가-힣]/.test(t))return'kor_Hang';if(/[一-鿿]/.test(t))return'zho_Hans';if(/[ऀ-ॿ]/.test(t))return'hin_Deva';if(/[Ѐ-ӿ]/.test(t))return'rus_Cyrl';if(/[֐-׿]/.test(t))return'heb_Hebr';if(/[ا-ی]/.test(t))return'arb_Arab';return'eng_Latn'}
+function chunks(t){const a=[];let s=t.trim();while(s.length>MAX_CHUNK){let i=s.lastIndexOf(' ',MAX_CHUNK);if(i<200)i=MAX_CHUNK;a.push(s.slice(0,i));s=s.slice(i).trim()}if(s)a.push(s);return a}
+function read(k){try{return JSON.parse(localStorage.getItem(k)||'[]')}catch{return[]}} function write(k,v){localStorage.setItem(k,JSON.stringify(v.slice(0,50)))}
+function addHist(e){const a=read('earth_history').filter(x=>!(x.input===e.input&&x.output===e.output));a.unshift(e);write('earth_history',a);renderLists()}
+function addFav(e){const a=read('earth_favorites');if(!a.some(x=>x.input===e.input&&x.output===e.output)){a.unshift(e);write('earth_favorites',a);toast(FA.saved||'Saved')}}
+function renderLists(){els.history.innerHTML='';els.favs.innerHTML='';const draw=(el,list,empty,key)=>{if(!list.length){el.textContent=empty;el.className='empty-state';return}el.className='entry-list';list.forEach(x=>{const r=document.createElement('article');r.className='entry-row';r.innerHTML=`<div class="entry-meta">${name(x.source)} → ${name(x.target)}</div><div class="entry-input"></div><div class="entry-output"></div><div class="entry-actions"><button class="tiny-button" data-use>${EN.use}</button><button class="tiny-button ghost" data-remove>${EN.remove}</button></div>`;r.querySelector('.entry-input').textContent=x.input;r.querySelector('.entry-output').textContent=x.output;r.querySelector('[data-use]').onclick=()=>{els.src.value=x.source;els.dst.value=x.target;els.input.value=x.input;els.out.textContent=x.output;els.input.dispatchEvent(new Event('input'));close()};r.querySelector('[data-remove]').onclick=()=>{write(key,read(key).filter(y=>!(y.input===x.input&&y.output===x.output)));renderLists()};el.appendChild(r)})};draw(els.history,read('earth_history'),EN.noHistory,'earth_history');draw(els.favs,read('earth_favorites'),EN.noFavorites,'earth_favorites')}
+function toast(t){els.toast.textContent=t;els.toast.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>els.toast.classList.remove('show'),1600)}
+function modal(id){els.overlay.hidden=false;const m=$(id);m.hidden=false;requestAnimationFrame(()=>{els.overlay.classList.add('show');m.classList.add('show')})} function close(){els.overlay.classList.remove('show');document.querySelectorAll('.modal.show').forEach(m=>m.classList.remove('show'));setTimeout(()=>{els.overlay.hidden=true;document.querySelectorAll('.modal').forEach(m=>m.hidden=true)},180)}
+function theme(v){document.documentElement.dataset.theme=v;localStorage.setItem('earth_theme',v)}
+function motion(v){document.documentElement.classList.toggle('motion-off',!v);localStorage.setItem('earth_motion',v?'1':'0')}
+async function applyLanguage(){let s=strings();if(!s){s=localStorage.getItem('earth_ui_'+state.appLang)?JSON.parse(localStorage.getItem('earth_ui_'+state.appLang)):null;if(!s){const tr=await translator();s={...EN};for(const k of Object.keys(EN)){const o=await tr(EN[k],{src_lang:'eng_Latn',tgt_lang:state.appLang,max_new_tokens:80});s[k]=Array.isArray(o)?o[0]?.translation_text||EN[k]:EN[k]}localStorage.setItem('earth_ui_'+state.appLang,JSON.stringify(s))}}document.querySelectorAll('[data-i18n]').forEach(n=>{if(s[n.dataset.i18n])n.textContent=s[n.dataset.i18n]});document.querySelectorAll('[data-i18n-placeholder]').forEach(n=>{if(s[n.dataset.i18nPlaceholder])n.placeholder=s[n.dataset.i18nPlaceholder]});document.documentElement.lang=state.appLang;document.documentElement.dir=rtl(state.appLang)?'rtl':'ltr';populate();renderLists()}
+els.go.onclick=async()=>{const text=els.input.value.trim();if(!text)return;const source=els.src.value==='auto'?detect(text):els.src.value,target=els.dst.value;state.detected=source;if(source===target){els.out.textContent=text;return}els.go.disabled=true;els.status.textContent=`${FA.translation}…`;try{const tr=await translator(),parts=chunks(text),out=[];for(let i=0;i<parts.length;i++){const r=await tr(parts[i],{src_lang:source,tgt_lang:target,max_new_tokens:256});out.push(r?.[0]?.translation_text||'');els.bar.style.width=((i+1)/parts.length*100)+'%'}els.out.textContent=out.join('\n\n');els.out.classList.remove('reveal');void els.out.offsetWidth;els.out.classList.add('reveal');addHist({source,target,input:text,output:els.out.textContent,at:Date.now()})}catch(e){els.out.textContent=FA.failed||'Translation failed.';console.error(e)}finally{els.go.disabled=false;els.wrap.hidden=true}};
+els.input.oninput=()=>els.count.textContent=els.input.value.length.toLocaleString();els.filter.oninput=populate;els.clear.onclick=()=>{els.input.value='';els.out.textContent=FA.placeholder;els.count.textContent='0'};els.copy.onclick=async()=>{if(els.out.textContent.trim())await navigator.clipboard?.writeText(els.out.textContent);toast(FA.copy)};els.save.onclick=()=>{if(els.input.value.trim()&&els.out.textContent.trim()&&els.out.textContent!==FA.placeholder)addFav({source:els.src.value==='auto'?state.detected:els.src.value,target:els.dst.value,input:els.input.value,output:els.out.textContent,at:Date.now()})};els.share.onclick=async()=>{try{await navigator.share?.({title:'Earth Dictionary',text:els.out.textContent});toast(FA.share)}catch{}};els.export.onclick=()=>{const b=new Blob([els.out.textContent],{type:'text/plain'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='translation.txt';a.click();URL.revokeObjectURL(u)};els.src.onchange=()=>localStorage.setItem('earth_src',els.src.value);els.dst.onchange=()=>localStorage.setItem('earth_dst',els.dst.value);
+els.app.onchange=async e=>{state.appLang=e.target.value;localStorage.setItem('earth_app_language',state.appLang);await applyLanguage();toast(FA.languageChanged||'Language updated')};$('#settingsButton').onclick=()=>modal('#settingsModal');$('#historyButton').onclick=()=>modal('#historyModal');$('#openHistory').onclick=()=>modal('#historyModal');$('#openFavorites').onclick=()=>modal('#favoritesModal');$('#openAbout').onclick=()=>modal('#aboutModal');els.overlay.onclick=close;document.querySelectorAll('[data-close-modal]').forEach(b=>b.onclick=close);$('#themeSelect').onchange=e=>theme(e.target.value);$('#textSize').oninput=e=>{document.documentElement.style.setProperty('--scale',e.target.value);localStorage.setItem('earth_text_size',e.target.value)};$('#animations').onchange=e=>motion(e.target.checked);$('#rememberLanguages').onchange=e=>localStorage.setItem('earth_remember',e.target.checked?'1':'0');els.clearHistory.onclick=()=>{localStorage.removeItem('earth_history');renderLists();toast(FA.historyCleared)};
+function init(){theme(localStorage.getItem('earth_theme')||'system');document.documentElement.style.setProperty('--scale',localStorage.getItem('earth_text_size')||'1');motion(localStorage.getItem('earth_motion')!=='0');populate();els.src.value=localStorage.getItem('earth_src')||'auto';els.dst.value=localStorage.getItem('earth_dst')||'eng_Latn';renderLists();applyLanguage();setTimeout(()=>els.splash.classList.add('hide'),850)}init();
