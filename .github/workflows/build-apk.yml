@@ -58,19 +58,39 @@ jobs:
           rm -rf .llama
           git clone --depth 1 https://github.com/drizzt/llama.cpp.git .llama
 
-      - name: Download compact offline NLLB model
+      - name: Download embedded NLLB Q4_K_M model
         shell: bash
         run: |
           set -euo pipefail
           rm -rf .build/nllb-model
           mkdir -p .build/nllb-model app/src/main/assets/models
-          MODEL_URL="https://huggingface.co/Hosstia/nllb-200-distilled-600m-gguf/resolve/main/nllb-600m-Q4_0.gguf?download=true"
-          MODEL_FILE=".build/nllb-model/nllb-600m-Q4_0.gguf"
-          echo "Downloading $MODEL_URL"
-          curl -L --fail --retry 5 --retry-all-errors --connect-timeout 20 -o "$MODEL_FILE" "$MODEL_URL"
-          test "$(stat -c %s "$MODEL_FILE")" -gt 450000000
+          python3 -m pip install --disable-pip-version-check -q -U huggingface_hub
+          export HF_HUB_DISABLE_XET=1
+          export HF_HUB_DISABLE_UPDATE_CHECK=1
+          python3 - <<'PY'
+          from pathlib import Path
+          from huggingface_hub import hf_hub_download
+
+          repo_id = "keisuke-miyako/nllb-200-distilled-600M-gguf-q4_k_m"
+          filename = "nllb-200-distilled-600M-q4_k_m.gguf"
+          target_dir = Path(".build/nllb-model")
+          target_dir.mkdir(parents=True, exist_ok=True)
+          path = hf_hub_download(
+              repo_id=repo_id,
+              filename=filename,
+              repo_type="model",
+              revision="main",
+              local_dir=str(target_dir),
+              force_download=True,
+          )
+          print(f"Downloaded NLLB Q4_K_M: {path}")
+          PY
+          MODEL_FILE=".build/nllb-model/nllb-200-distilled-600M-q4_k_m.gguf"
+          test -f "$MODEL_FILE"
+          MODEL_SIZE="$(stat -c %s "$MODEL_FILE")"
+          test "$MODEL_SIZE" -gt 700000000
           cp "$MODEL_FILE" app/src/main/assets/models/nllb-q4.gguf
-          stat -c 'Embedded NLLB model: %s bytes' app/src/main/assets/models/nllb-q4.gguf
+          stat -c 'Embedded NLLB Q4_K_M model: %s bytes' app/src/main/assets/models/nllb-q4.gguf
 
       - name: Verify NLLB model with native reference build
         shell: bash
