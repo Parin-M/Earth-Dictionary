@@ -3,60 +3,94 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="theme-color" content="#f7f8fa" />
+  <meta name="theme-color" content="#f4f6f8" />
   <title>Earth Dictionary</title>
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
+  <div id="splash" class="splash" aria-hidden="true">
+    <div class="splash-glow"></div>
+    <img class="splash-logo" src="/assets/logo.svg" alt="Earth Dictionary" />
+    <div class="splash-brand">Earth Dictionary</div>
+    <div class="splash-subtitle" data-i18n="tagline">Dictionary &amp; translator</div>
+  </div>
+
   <main class="shell">
-    <header class="header">
-      <div>
-        <h1>Earth Dictionary</h1>
-        <p>Dictionary &amp; Offline Translator</p>
+    <header class="header app-enter delay-1">
+      <div class="brand">
+        <img class="brand-logo" src="/assets/logo.svg" alt="Earth Dictionary" />
+        <div>
+          <h1>Earth Dictionary</h1>
+          <p data-i18n="tagline">Dictionary &amp; translator</p>
+        </div>
       </div>
-      <span class="offline-pill">● کاملاً آفلاین</span>
+      <div class="header-actions">
+        <button id="historyButton" class="icon-button" type="button" data-tooltip="history" aria-label="History"><span aria-hidden="true">◷</span></button>
+        <button id="settingsButton" class="icon-button" type="button" data-tooltip="settings" aria-label="Settings"><span aria-hidden="true">⌘</span></button>
+      </div>
     </header>
 
-    <section class="card">
-      <div class="lang-row">
-        <label>
-          <span>زبان مبدأ</span>
-          <select id="sourceLanguage"></select>
-        </label>
-        <button id="swap" class="swap" aria-label="جابه‌جایی زبان‌ها">⇄</button>
-        <label>
-          <span>زبان مقصد</span>
-          <select id="targetLanguage"></select>
-        </label>
+    <section class="hero-card app-enter delay-2">
+      <div class="hero-line">
+        <div><div class="eyebrow" data-i18n="eyebrow">Translation</div><div class="hero-title" data-i18n="hero">Simple, private, on-device.</div></div>
+        <div class="device-status"><span class="status-dot"></span><span data-i18n="device">On device</span></div>
       </div>
 
-      <div class="search-row">
-        <input id="languageFilter" type="search" placeholder="جستجوی زبان…" autocomplete="off" />
+      <div class="lang-row">
+        <label class="field-label"><span data-i18n="source">Source language</span><select id="sourceLanguage"></select></label>
+        <button id="swap" class="swap" type="button" aria-label="Swap languages">⇄</button>
+        <label class="field-label"><span data-i18n="target">Target language</span><select id="targetLanguage"></select></label>
       </div>
+
+      <div class="search-row"><input id="languageFilter" type="search" data-i18n-placeholder="search" placeholder="Search languages…" autocomplete="off" /></div>
 
       <div class="editor-grid">
-        <section class="panel">
-          <div class="panel-title"><span>متن ورودی</span><button id="clear" class="text-btn">پاک کردن</button></div>
-          <textarea id="sourceText" maxlength="12000" placeholder="متن را وارد کنید…"></textarea>
-          <div class="counter"><span id="sourceCount">۰</span> / ۱۲۰۰۰</div>
+        <section class="panel lift-on-hover">
+          <div class="panel-title"><span data-i18n="input">Input text</span><button id="clear" class="text-btn" type="button" data-i18n="clear">Clear</button></div>
+          <textarea id="sourceText" maxlength="12000" data-i18n-placeholder="inputPH" placeholder="Type or paste text…"></textarea>
+          <div class="panel-foot"><span id="sourceCount">0</span> / 12,000</div>
         </section>
-        <section class="panel result-panel">
-          <div class="panel-title"><span>ترجمه</span><button id="copy" class="text-btn">کپی</button></div>
-          <div id="resultText" class="result" aria-live="polite">ترجمه اینجا نمایش داده می‌شود.</div>
+        <section class="panel result-panel lift-on-hover">
+          <div class="panel-title"><span data-i18n="translation">Translation</span><div class="result-actions"><button id="save" class="text-btn" type="button" data-i18n="save">Save</button><button id="copy" class="text-btn" type="button" data-i18n="copy">Copy</button><button id="share" class="text-btn" type="button" data-i18n="share">Share</button></div></div>
+          <div id="resultText" class="result" aria-live="polite" data-i18n="placeholder">Your translation will appear here.</div>
           <div id="progressWrap" class="progress-wrap" hidden><div id="progressBar" class="progress-bar"></div></div>
         </section>
       </div>
 
-      <button id="translate" class="primary">ترجمه</button>
-      <p id="status" class="status">مدل ترجمه هنوز بارگذاری نشده است.</p>
+      <div class="primary-row"><button id="translate" class="primary" type="button"><span class="primary-orb" aria-hidden="true"></span><span data-i18n="translate">Translate</span></button><button id="export" class="secondary" type="button" data-i18n="export">Export</button></div>
+      <p id="status" class="status" aria-live="polite"></p>
     </section>
 
-    <section class="info-grid">
-      <div class="mini-card"><strong>NLLB-200</strong><span>پوشش زبانی گسترده روی خود دستگاه</span></div>
-      <div class="mini-card"><strong>ONNX / WASM</strong><span>بدون API و بدون ارسال متن به اینترنت</span></div>
-      <div class="mini-card"><strong>Local History</strong><span>تاریخچه فقط داخل گوشی ذخیره می‌شود</span></div>
+    <section class="quick-grid app-enter delay-3">
+      <button class="quick-card" id="openFavorites" type="button"><span class="quick-icon">☆</span><span class="quick-copy"><strong data-i18n="favorites">Favorites</strong><small data-i18n="favoritesHint">Saved translations</small></span></button>
+      <button class="quick-card" id="openHistory" type="button"><span class="quick-icon">◷</span><span class="quick-copy"><strong data-i18n="history">History</strong><small data-i18n="historyHint">Recent translations</small></span></button>
+      <button class="quick-card" id="openAbout" type="button"><span class="quick-icon">i</span><span class="quick-copy"><strong data-i18n="about">About</strong><small data-i18n="aboutHint">Earth Dictionary</small></span></button>
     </section>
   </main>
+
+  <div id="overlay" class="overlay" hidden></div>
+
+  <section id="settingsModal" class="modal" hidden aria-modal="true" role="dialog">
+    <div class="modal-head"><div><span class="modal-kicker" data-i18n="settings">Settings</span><h2 data-i18n="preferences">Preferences</h2></div><button class="close-button" type="button" data-close-modal>×</button></div>
+    <div class="settings-list">
+      <label class="setting-row"><span><strong data-i18n="appLanguage">App language</strong><small data-i18n="appLanguageHint">The interface can use every supported translation language.</small></span><select id="appLanguage"></select></label>
+      <label class="setting-row"><span><strong data-i18n="theme">Theme</strong><small data-i18n="themeHint">Choose the look of the app.</small></span><select id="themeSelect"><option value="system" data-i18n="system">System</option><option value="light" data-i18n="light">Light</option><option value="dark" data-i18n="dark">Dark</option></select></label>
+      <label class="setting-row"><span><strong data-i18n="textSize">Text size</strong><small data-i18n="textSizeHint">Adjust readability across the app.</small></span><input id="textSize" type="range" min="0.9" max="1.16" step="0.02" value="1" /></label>
+      <label class="setting-row switch-row"><span><strong data-i18n="animations">Animations</strong><small data-i18n="animationsHint">Use soft motion throughout the interface.</small></span><input id="animations" type="checkbox" checked /></label>
+      <label class="setting-row switch-row"><span><strong data-i18n="remember">Remember languages</strong><small data-i18n="rememberHint">Keep your last source and target choice.</small></span><input id="rememberLanguages" type="checkbox" checked /></label>
+      <button id="clearHistory" class="danger-button" type="button" data-i18n="clearHistory">Clear local history</button>
+    </div>
+  </section>
+
+  <section id="historyModal" class="modal" hidden aria-modal="true" role="dialog"><div class="modal-head"><div><span class="modal-kicker" data-i18n="history">History</span><h2 data-i18n="recent">Recent translations</h2></div><button class="close-button" type="button" data-close-modal>×</button></div><div id="historyList" class="entry-list"></div></section>
+  <section id="favoritesModal" class="modal" hidden aria-modal="true" role="dialog"><div class="modal-head"><div><span class="modal-kicker" data-i18n="favorites">Favorites</span><h2 data-i18n="saved">Saved translations</h2></div><button class="close-button" type="button" data-close-modal>×</button></div><div id="favoritesList" class="entry-list"></div></section>
+
+  <section id="aboutModal" class="modal" hidden aria-modal="true" role="dialog">
+    <div class="modal-head"><div><span class="modal-kicker" data-i18n="about">About</span><h2>Earth Dictionary</h2></div><button class="close-button" type="button" data-close-modal>×</button></div>
+    <div class="about-content"><img class="about-logo" src="/assets/logo.svg" alt="Earth Dictionary" /><p data-i18n="aboutText">A minimal dictionary and on-device translator built for private, everyday language work.</p><div class="credits"><div><span data-i18n="createdBy">Created by</span><strong>پرین مشعلچیان</strong></div><div><span>&amp;</span><strong>ابوالفضل یوسفی</strong></div></div><div class="about-meta"><span data-i18n="model">Translation model</span><strong>NLLB-200</strong></div><div class="about-meta"><span data-i18n="version">Version</span><strong>1.1.0</strong></div></div>
+  </section>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script type="module" src="/main.js"></script>
 </body>
 </html>
