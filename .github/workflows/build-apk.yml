@@ -51,19 +51,21 @@ jobs:
         working-directory: web
         run: npm run build
 
-      - name: Fetch NLLB-enabled native engine
+      - name: Fetch minimal M2M100 native engine
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf .llama
-          git clone --depth 1 https://github.com/drizzt/llama.cpp.git .llama
+          rm -rf .crispasr
+          git clone --depth 1 --filter=blob:none --sparse https://github.com/CrispStrobe/CrispASR.git .crispasr
+          git -C .crispasr sparse-checkout set src/m2m100.cpp src/m2m100.h src/core include
+          git -C .crispasr submodule update --init --depth 1 ggml
 
-      - name: Download embedded NLLB Q4_K_M model
+      - name: Download embedded M2M100 Q4_K model
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf .build/nllb-model
-          mkdir -p .build/nllb-model app/src/main/assets/models
+          rm -rf .build/m2m-model
+          mkdir -p .build/m2m-model app/src/main/assets/models
           python3 -m pip install --disable-pip-version-check -q -U huggingface_hub
           export HF_HUB_DISABLE_XET=1
           export HF_HUB_DISABLE_UPDATE_CHECK=1
@@ -71,9 +73,9 @@ jobs:
           from pathlib import Path
           from huggingface_hub import hf_hub_download
 
-          repo_id = "keisuke-miyako/nllb-200-distilled-600M-gguf-q4_k_m"
-          filename = "nllb-200-distilled-600M-q4_k_m.gguf"
-          target_dir = Path(".build/nllb-model")
+          repo_id = "cstr/m2m100-418m-GGUF"
+          filename = "m2m100-418m-q4_k.gguf"
+          target_dir = Path(".build/m2m-model")
           target_dir.mkdir(parents=True, exist_ok=True)
           path = hf_hub_download(
               repo_id=repo_id,
@@ -83,36 +85,29 @@ jobs:
               local_dir=str(target_dir),
               force_download=True,
           )
-          print(f"Downloaded NLLB Q4_K_M: {path}")
+          print(f"Downloaded M2M100 Q4_K: {path}")
           PY
-          MODEL_FILE=".build/nllb-model/nllb-200-distilled-600M-q4_k_m.gguf"
+          MODEL_FILE=".build/m2m-model/m2m100-418m-q4_k.gguf"
           test -f "$MODEL_FILE"
           MODEL_SIZE="$(stat -c %s "$MODEL_FILE")"
-          test "$MODEL_SIZE" -gt 700000000
-          cp "$MODEL_FILE" app/src/main/assets/models/nllb-q4.gguf
-          stat -c 'Embedded NLLB Q4_K_M model: %s bytes' app/src/main/assets/models/nllb-q4.gguf
+          test "$MODEL_SIZE" -gt 250000000
+          test "$MODEL_SIZE" -lt 310000000
+          cp "$MODEL_FILE" app/src/main/assets/models/m2m100-q4k.gguf
+          stat -c 'Embedded M2M100 Q4_K model: %s bytes' app/src/main/assets/models/m2m100-q4k.gguf
 
-      - name: Verify NLLB model with native reference build
+      - name: Verify M2M100 model with native smoke test
         shell: bash
         run: |
           set -euo pipefail
-          cmake -S .llama -B .build/llama-host \
+          cmake -S app/src/main/cpp -B .build/m2m-host \
             -DCMAKE_BUILD_TYPE=Release \
-            -DLLAMA_BUILD_EXAMPLES=ON \
-            -DLLAMA_BUILD_TESTS=OFF \
-            -DLLAMA_BUILD_TOOLS=OFF \
-            -DLLAMA_BUILD_SERVER=OFF \
-            -DLLAMA_BUILD_COMMON=ON \
+            -DCRISPASR_SRC_DIR="${GITHUB_WORKSPACE}/.crispasr" \
+            -DEARTH_M2M_HOST_TEST=ON \
             -DGGML_NATIVE=OFF \
             -DGGML_OPENMP=OFF \
             -DGGML_LLAMAFILE=OFF
-          cmake --build .build/llama-host --target llama-nllb -j2
-          .build/llama-host/bin/llama-nllb \
-            -m app/src/main/assets/models/nllb-q4.gguf \
-            -p 'Hello, how are you?' \
-            -sl eng_Latn \
-            -tl fra_Latn \
-            -n 32
+          cmake --build .build/m2m-host --target earthm2m-smoke -j2
+          .build/m2m-host/earthm2m-smoke app/src/main/assets/models/m2m100-q4k.gguf
 
       - name: Package web UI into Android assets
         shell: bash
