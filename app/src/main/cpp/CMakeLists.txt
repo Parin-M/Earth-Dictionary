@@ -1,8 +1,13 @@
 cmake_minimum_required(VERSION 3.22.1)
 project(earthm2m)
 
-if(NOT DEFINED CRISPASR_SRC_DIR OR NOT EXISTS "${CRISPASR_SRC_DIR}/src/m2m100.cpp")
-    message(FATAL_ERROR "CRISPASR_SRC_DIR must point to a CrispASR source tree containing src/m2m100.cpp")
+if(NOT DEFINED CRISPASR_SRC_DIR)
+    get_filename_component(EARTH_REPO_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../../.." ABSOLUTE)
+    set(CRISPASR_SRC_DIR "${EARTH_REPO_ROOT}/.crispasr" CACHE PATH "CrispASR source tree")
+endif()
+
+if(NOT EXISTS "${CRISPASR_SRC_DIR}/src/m2m100.cpp")
+    message(FATAL_ERROR "CRISPASR source tree not found: ${CRISPASR_SRC_DIR}")
 endif()
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
@@ -21,8 +26,7 @@ find_package(Threads REQUIRED)
 # CrispASR vendors the ggml revision required by its M2M100 runtime.
 add_subdirectory("${CRISPASR_SRC_DIR}/ggml" ggml-src EXCLUDE_FROM_ALL)
 
-# Only compile the small subset needed for text translation. This avoids
-# pulling the full CrispASR backend library tree into the Android binary.
+# Only compile the small subset needed for text translation.
 add_library(crispasr-core-lite STATIC
     "${CRISPASR_SRC_DIR}/src/core/gguf_loader.cpp"
 )
