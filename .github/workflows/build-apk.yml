@@ -56,9 +56,12 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf .crispasr
-          git clone --depth 1 --filter=blob:none --sparse https://github.com/CrispStrobe/CrispASR.git .crispasr
-          git -C .crispasr sparse-checkout set src/m2m100.cpp src/m2m100.h src/core include
-          git -C .crispasr submodule update --init --depth 1 ggml
+          git clone --depth 1 --recurse-submodules --shallow-submodules \
+            https://github.com/CrispStrobe/CrispASR.git .crispasr
+          test -f .crispasr/src/m2m100.cpp
+          test -f .crispasr/src/m2m100.h
+          test -f .crispasr/src/core/gguf_loader.cpp
+          test -f .crispasr/ggml/CMakeLists.txt
 
       - name: Download embedded M2M100 Q4_K model
         shell: bash
