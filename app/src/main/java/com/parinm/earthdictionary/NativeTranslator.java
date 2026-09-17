@@ -2,7 +2,7 @@ package com.parinm.earthdictionary;
 
 public final class NativeTranslator {
     static {
-        System.loadLibrary("earthnllb");
+        System.loadLibrary("earthm2m");
     }
 
     private NativeTranslator() {}
