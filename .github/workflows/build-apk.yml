@@ -57,13 +57,14 @@ jobs:
           download "$MODEL_BASE/onnx/decoder_model_merged_quantized.onnx" "$MODEL_DIR/onnx/decoder_model_merged_quantized.onnx"
           curl -L --fail --retry 3 -o "$MODEL_DIR/LICENSE" "$MODEL_BASE/LICENSE" || true
 
-      - name: Copy ONNX Runtime WebAssembly binaries
+      - name: Copy only the required ONNX Runtime WebAssembly binary
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p web/public/wasm
-          find web/node_modules/onnxruntime-web -type f -name '*.wasm' -exec cp -f {} web/public/wasm/ \;
-          test -n "$(find web/public/wasm -type f -name '*.wasm' -print -quit)"
+          ORT_WASM="web/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm"
+          test -f "$ORT_WASM"
+          cp -f "$ORT_WASM" web/public/wasm/
 
       - name: Build web UI
         working-directory: web
@@ -77,8 +78,21 @@ jobs:
           mkdir -p app/src/main/assets/web
           cp -R web/dist/. app/src/main/assets/web/
 
+      - name: Show packaged model size
+        shell: bash
+        run: |
+          set -euo pipefail
+          du -h web/public/models/Xenova/nllb-200-distilled-600M/onnx/*.onnx
+          du -h web/public/wasm/*.wasm
+
       - name: Build installable APK
         run: gradle --no-daemon :app:assembleDebug --stacktrace
+
+      - name: Report APK size
+        shell: bash
+        run: |
+          set -euo pipefail
+          ls -lh app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
