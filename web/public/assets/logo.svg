@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none">
+  <defs>
+    <linearGradient id="earth" x1="42" y1="35" x2="212" y2="222" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4BA8FF"/>
+      <stop offset="1" stop-color="#1C6FB6"/>
+    </linearGradient>
+    <linearGradient id="land" x1="51" y1="63" x2="192" y2="201" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9DDB74"/>
+      <stop offset="1" stop-color="#3A9E62"/>
+    </linearGradient>
+  </defs>
+  <rect x="16" y="16" width="224" height="224" rx="68" fill="#F4F7FA"/>
+  <circle cx="112" cy="115" r="66" fill="url(#earth)"/>
+  <path d="M63 80c19-23 49-31 69-20 9 5 15 14 11 22-6 10-18 15-25 23-9 10-11 24-23 28-17 6-33-6-43-18-7-9-5-24 11-35Z" fill="url(#land)"/>
+  <path d="M153 148c12-9 25-11 39-5-3 15-11 29-22 40-17 16-42 24-64 20-7-10-6-21 1-28 8-9 21-13 32-17 7-3 8-5 14-10Z" fill="url(#land)"/>
+  <path d="M157 175c17-3 35 1 49 14-18 23-45 36-74 37 5-18 12-34 25-44Z" fill="#42B979"/>
+  <path d="M155 211c17-13 31-18 52-22-15 20-38 32-63 35 4-5 7-9 11-13Z" fill="#2C8D58"/>
+  <path d="M162 169c13 2 31 10 42 21" stroke="#F8FFF9" stroke-width="6" stroke-linecap="round"/>
+  <path d="M183 178c3 12 1 27-4 39" stroke="#F8FFF9" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="112" cy="115" r="66" stroke="#0F5B92" stroke-opacity=".22" stroke-width="3"/>
+</svg>
