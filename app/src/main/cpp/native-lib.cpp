@@ -4,6 +4,7 @@
 #include <cmath>
 #include <mutex>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <vector>
 
@@ -43,7 +44,7 @@ bool build_language_index_locked() {
         const char *text = llama_vocab_get_text(vocab, i);
         if (!text) continue;
         std::string token(text);
-        if (token.size() == 8 && token[3] == '_' && token[4] != '\0') {
+        if (token.size() == 8 && token[3] == '_') {
             g_languages.emplace(std::move(token), static_cast<llama_token>(i));
         }
     }
