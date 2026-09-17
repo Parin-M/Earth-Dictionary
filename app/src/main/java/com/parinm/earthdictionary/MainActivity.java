@@ -49,7 +49,7 @@ public final class MainActivity extends Activity {
         settings.setSupportZoom(false);
         settings.setTextZoom(100);
 
-        nativeBridge = new NativeBridge(webView);
+        nativeBridge = new NativeBridge(this, webView);
         webView.addJavascriptInterface(nativeBridge, "EarthNative");
         webView.setWebViewClient(new OfflineAssetWebViewClient(getAssets(), nativeBridge));
         webView.loadUrl(START_URL);
@@ -64,12 +64,14 @@ public final class MainActivity extends Activity {
     }
 
     private static final class NativeBridge {
+        private final MainActivity activity;
         private final WebView webView;
         private final ExecutorService executor = Executors.newSingleThreadExecutor();
         private volatile boolean ready;
         private volatile boolean started;
 
-        NativeBridge(WebView webView) {
+        NativeBridge(MainActivity activity, WebView webView) {
+            this.activity = activity;
             this.webView = webView;
         }
 
@@ -119,15 +121,15 @@ public final class MainActivity extends Activity {
         }
 
         private File prepareModel() throws IOException {
-            File model = new File(getFilesDir(), "nllb-q4.gguf");
+            File model = new File(activity.getFilesDir(), "nllb-q4.gguf");
             if (model.isFile() && model.length() > 450_000_000L) return model;
 
-            File tmp = new File(getFilesDir(), "nllb-q4.gguf.part");
+            File tmp = new File(activity.getFilesDir(), "nllb-q4.gguf.part");
             if (tmp.exists() && !tmp.delete()) {
                 throw new IOException("Cannot replace incomplete model cache.");
             }
 
-            try (InputStream input = getAssets().open(MODEL_ASSET, AssetManager.ACCESS_STREAMING);
+            try (InputStream input = activity.getAssets().open(MODEL_ASSET, AssetManager.ACCESS_STREAMING);
                  OutputStream output = new FileOutputStream(tmp)) {
                 byte[] buffer = new byte[1024 * 1024];
                 int read;
@@ -205,7 +207,8 @@ public final class MainActivity extends Activity {
             }
 
             String assetPath = "web" + path;
-            try (InputStream input = assets.open(assetPath, AssetManager.ACCESS_STREAMING)) {
+            try {
+                InputStream input = assets.open(assetPath, AssetManager.ACCESS_STREAMING);
                 String mime = mimeType(path);
                 String encoding = mime.startsWith("text/") || mime.contains("javascript") || mime.contains("json") ? "utf-8" : null;
                 return new WebResourceResponse(mime, encoding, input);
