@@ -10,8 +10,20 @@ android {
         applicationId = "com.parinm.earthdictionary"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "1.2.0"
+
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+            arguments += listOf("-DLLAMA_SRC_DIR=${rootProject.projectDir}/.llama")
+        }
     }
 
     buildTypes {
@@ -22,7 +34,6 @@ android {
 
     androidResources {
         noCompress += "wasm"
-        noCompress += "xz"
     }
 
     packaging {
@@ -35,8 +46,4 @@ android {
         includeInApk = false
         includeInBundle = false
     }
-}
-
-dependencies {
-    implementation("org.tukaani:xz:1.12")
 }
