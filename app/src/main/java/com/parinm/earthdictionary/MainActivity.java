@@ -11,6 +11,8 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import org.tukaani.xz.XZInputStream;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -79,9 +81,19 @@ public final class MainActivity extends Activity {
             if (path.contains("..")) {
                 return blockedResponse();
             }
+
             String assetPath = "web" + path;
             try {
-                InputStream input = assets.open(assetPath, AssetManager.ACCESS_STREAMING);
+                InputStream input;
+                try {
+                    input = assets.open(assetPath, AssetManager.ACCESS_STREAMING);
+                } catch (IOException normalMissing) {
+                    // Large model/config assets are stored as .xz inside the APK.
+                    // Decompress them on the fly so the model never has to be
+                    // downloaded or extracted to persistent app storage.
+                    input = new XZInputStream(assets.open(assetPath + ".xz", AssetManager.ACCESS_STREAMING));
+                }
+
                 String mime = mimeType(path);
                 String encoding = mime.startsWith("text/") || mime.contains("javascript") || mime.contains("json") ? "utf-8" : null;
                 return new WebResourceResponse(mime, encoding, input);
