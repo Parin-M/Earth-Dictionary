@@ -1,7 +1,7 @@
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <string>
 #include <thread>
 
 #include "m2m100.h"
