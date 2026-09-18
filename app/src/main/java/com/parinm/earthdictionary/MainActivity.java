@@ -208,7 +208,7 @@ public final class MainActivity extends Activity {
                     File tessPath = prepareTessData();
                     Bitmap bitmap = loadBitmap(uri);
 
-                    OcrResult result = recognize(bitmap, sourceLang, tessPath);
+                    OcrResult result = recognize(bitmap, sourceLang, tessPath.getAbsolutePath());
                     if (result.text.trim().isEmpty()) {
                         notifyOcr(requestId, "", false, "No readable text was found in the image.", "");
                     } else {
@@ -311,7 +311,7 @@ public final class MainActivity extends Activity {
         private OcrResult recognizeWithTesseract(Bitmap bitmap, String tessPath, String languages) throws Exception {
             TessBaseAPI api = new TessBaseAPI();
             try {
-                if (!api.init(tessPath.getAbsolutePath(), languages)) {
+                if (!api.init(tessPath, languages)) {
                     throw new IOException("Tesseract OCR initialization failed.");
                 }
                 api.setPageSegMode(TessBaseAPI.PageSegMode.PSM_AUTO);
