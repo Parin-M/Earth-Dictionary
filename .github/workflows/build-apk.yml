@@ -120,8 +120,19 @@ jobs:
           mkdir -p app/src/main/assets/web
           cp -R web/dist/. app/src/main/assets/web/
 
-      - name: Build installable APK
+      - name: Build universal installable APK
         run: gradle --no-daemon :app:assembleDebug --stacktrace
+
+      - name: Verify universal APK ABIs
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          test -f "$APK"
+          unzip -l "$APK" | grep -q 'lib/arm64-v8a/libearthm2m.so'
+          unzip -l "$APK" | grep -q 'lib/armeabi-v7a/libearthm2m.so'
+          unzip -l "$APK" | grep -q 'lib/x86_64/libearthm2m.so'
+          echo "Universal APK ABIs: arm64-v8a, armeabi-v7a, x86_64"
 
       - name: Report APK size
         shell: bash
@@ -133,7 +144,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Earth-Dictionary-debug-apk
+          name: Earth-Dictionary-universal-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
