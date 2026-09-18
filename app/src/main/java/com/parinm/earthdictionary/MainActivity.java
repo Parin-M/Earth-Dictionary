@@ -205,7 +205,7 @@ public final class MainActivity extends Activity {
         void processImage(Uri uri, String requestId, String sourceLang) {
             executor.execute(() -> {
                 try {
-                    String tessPath = prepareTessData();
+                    File tessPath = prepareTessData();
                     Bitmap bitmap = loadBitmap(uri);
 
                     OcrResult result = recognize(bitmap, sourceLang, tessPath);
