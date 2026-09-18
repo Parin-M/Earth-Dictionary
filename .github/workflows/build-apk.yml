@@ -97,6 +97,19 @@ jobs:
           test "$MODEL_SIZE" -lt 310000000
           cp "$MODEL_FILE" app/src/main/assets/models/m2m100-q4k.gguf
           stat -c 'Embedded M2M100 Q4_K model: %s bytes' app/src/main/assets/models/m2m100-q4k.gguf
+      - name: Download embedded offline OCR data
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p app/src/main/assets/tessdata
+          for lang in eng fas ara aze heb urd; do
+            curl -L --fail --retry 3 --retry-all-errors \
+              "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/main/${lang}.traineddata" \
+              -o "app/src/main/assets/tessdata/${lang}.traineddata"
+            test -s "app/src/main/assets/tessdata/${lang}.traineddata"
+          done
+          du -h app/src/main/assets/tessdata/*.traineddata
+
 
       - name: Verify M2M100 model with native smoke test
         shell: bash
