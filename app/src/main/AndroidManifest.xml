@@ -3,8 +3,8 @@
     <application
         android:allowBackup="true"
         android:label="Earth Dictionary"
-        android:icon="@drawable/ic_logo"
-        android:roundIcon="@drawable/ic_logo"
+        android:icon="@drawable/earth_logo"
+        android:roundIcon="@drawable/earth_logo"
         android:usesCleartextTraffic="false"
         android:theme="@style/AppTheme">
         <activity
