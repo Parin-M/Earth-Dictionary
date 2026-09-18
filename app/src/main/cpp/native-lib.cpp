@@ -14,6 +14,8 @@
 namespace {
 std::mutex g_mutex;
 m2m100_context *g_context = nullptr;
+int g_beam_size = 5;
+int g_max_output_tokens = 256;
 
 std::string jstring_to_string(JNIEnv *env, jstring value) {
     if (!value) return {};
@@ -23,16 +25,8 @@ std::string jstring_to_string(JNIEnv *env, jstring value) {
     return result;
 }
 
-void free_context_locked() {
-    if (g_context) {
-        m2m100_free(g_context);
-        g_context = nullptr;
-    }
-}
-
 bool init_context_locked(const std::string &path) {
     if (g_context) return true;
-
     m2m100_context_params params = m2m100_context_default_params();
     params.n_threads = std::max(2, static_cast<int>(std::thread::hardware_concurrency()));
     params.verbosity = 0;
@@ -44,11 +38,15 @@ bool init_context_locked(const std::string &path) {
         return false;
     }
 
-    // Greedy decoding keeps CPU/RAM use predictable on Android. The model
-    // remains fully offline and supports any-to-any translation across its
-    // embedded 100-language vocabulary.
-    m2m100_set_beam_size(g_context, 1);
+    m2m100_set_beam_size(g_context, g_beam_size);
     return true;
+}
+
+void free_context_locked() {
+    if (g_context) {
+        m2m100_free(g_context);
+        g_context = nullptr;
+    }
 }
 
 std::string translate_locked(const std::string &text, const std::string &src_lang, const std::string &dst_lang) {
@@ -59,8 +57,9 @@ std::string translate_locked(const std::string &text, const std::string &src_lan
         text.c_str(),
         src_lang.c_str(),
         dst_lang.c_str(),
-        256
+        g_max_output_tokens
     );
+
     if (!translated) {
         LOGE("M2M100 translation failed: %s -> %s", src_lang.c_str(), dst_lang.c_str());
         return {};
@@ -82,6 +81,7 @@ extern "C" JNIEXPORT jstring JNICALL
 Java_com_parinm_earthdictionary_NativeTranslator_nativeTranslate(
         JNIEnv *env, jclass, jstring text, jstring srcLang, jstring dstLang) {
     std::lock_guard<std::mutex> lock(g_mutex);
+
     if (!g_context) return env->NewStringUTF("");
 
     const std::string result = translate_locked(
@@ -89,7 +89,21 @@ Java_com_parinm_earthdictionary_NativeTranslator_nativeTranslate(
         jstring_to_string(env, srcLang),
         jstring_to_string(env, dstLang)
     );
+
     return env->NewStringUTF(result.c_str());
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_parinm_earthdictionary_NativeTranslator_nativeSetBeamSize(JNIEnv *, jclass, jint beam) {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    g_beam_size = std::max(1, std::min(static_cast<int>(beam), 8));
+    if (g_context) m2m100_set_beam_size(g_context, g_beam_size);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_parinm_earthdictionary_NativeTranslator_nativeSetMaxOutput(JNIEnv *, jclass, jint tokens) {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    g_max_output_tokens = std::max(64, std::min(static_cast<int>(tokens), 1024));
 }
 
 extern "C" JNIEXPORT void JNICALL
