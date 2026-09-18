@@ -311,7 +311,7 @@ public final class MainActivity extends Activity {
         private OcrResult recognizeWithTesseract(Bitmap bitmap, String tessPath, String languages) throws Exception {
             TessBaseAPI api = new TessBaseAPI();
             try {
-                if (api.init(tessPath, languages) != 0) {
+                if (!api.init(tessPath.getAbsolutePath(), languages)) {
                     throw new IOException("Tesseract OCR initialization failed.");
                 }
                 api.setPageSegMode(TessBaseAPI.PageSegMode.PSM_AUTO);
