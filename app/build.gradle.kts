@@ -10,8 +10,8 @@ android {
         applicationId = "com.parinm.earthdictionary"
         minSdk = 26
         targetSdk = 36
-        versionCode = 6
-        versionName = "1.3.2"
+        versionCode = 7
+        versionName = "1.3.3"
 
         // Universal APK: 64-bit ARM, 32-bit ARM, and x86-64 Android devices.
         ndk {
