@@ -387,7 +387,7 @@ public final class MainActivity extends Activity {
 
         private String hintFromText(String text) {
             if (text == null) return "en";
-            if (/[پچژگکۀی]/.matcher(text).find()) return "fa";
+            if (text.matches("(?s).*[پچژگکۀی].*")) return "fa";
             if (text.matches("(?s).*[\u0590-\u05ff].*")) return "he";
             if (text.matches("(?s).*[\u0600-\u06ff].*")) return "ar";
             if (text.matches("(?s).*[\u4e00-\u9fff].*")) return "zh";
