@@ -10,10 +10,9 @@ android {
         applicationId = "com.parinm.earthdictionary"
         minSdk = 26
         targetSdk = 36
-        versionCode = 9
-        versionName = "1.3.5"
+        versionCode = 10
+        versionName = "1.4.0"
 
-        // Universal APK: 64-bit ARM, 32-bit ARM, and x86-64 Android devices.
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
         }
@@ -45,5 +44,14 @@ android {
     dependenciesInfo {
         includeInApk = false
         includeInBundle = false
+    }
+
+    dependencies {
+        implementation("com.google.mlkit:text-recognition:16.0.1")
+        implementation("com.google.mlkit:text-recognition-chinese:16.0.1")
+        implementation("com.google.mlkit:text-recognition-devanagari:16.0.1")
+        implementation("com.google.mlkit:text-recognition-japanese:16.0.1")
+        implementation("com.google.mlkit:text-recognition-korean:16.0.1")
+        implementation("com.rmtheis:tess-two:9.1.0")
     }
 }
